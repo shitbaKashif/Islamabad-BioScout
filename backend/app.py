@@ -159,6 +159,313 @@ def analytics():
         "top_locations": [{"location": l, "count": c} for l, c in top_locations],
     })
 
+@app.route("/api/user/stats/<username>", methods=["GET"])
+def get_user_stats(username):
+    """
+    Returns detailed statistics for a specific user.
+    Includes observation counts, species diversity, rewards, and rank.
+    """
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+    
+    try:
+        # Filter observations by the specified user
+        user_observations = [obs for obs in observations 
+                             if obs.get("observer", "").lower() == username.lower()]
+        
+        # Calculate all other users statistics for comparison/ranking
+        all_users = Counter([obs.get("observer", "Anonymous") for obs in observations])
+        user_ranks = sorted(all_users.items(), key=lambda x: x[1], reverse=True)
+        
+        # Find user's rank
+        user_rank = next((idx + 1 for idx, (name, _) in enumerate(user_ranks) 
+                          if name.lower() == username.lower()), 0)
+        
+        # Get unique species observed by user
+        unique_species = len(set(obs.get("species_name", "") for obs in user_observations))
+        
+        # Calculate unique locations visited
+        unique_locations = len(set(obs.get("location", "") for obs in user_observations))
+        
+        # Calculate observation frequency (last 30 days)
+        thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        recent_observations = len([
+            obs for obs in user_observations 
+            if obs.get("date_observed", "") >= thirty_days_ago
+        ])
+        
+        # Calculate rewards and badges
+        rewards = calculate_user_rewards(username, user_observations, all_users, user_rank)
+        
+        # Monthly contribution trends
+        monthly_trends = calculate_monthly_trends(username, observations)
+        
+        # Popular species and locations for this user
+        species_counts = Counter([obs.get("common_name", "Unknown") for obs in user_observations])
+        location_counts = Counter([obs.get("location", "Unknown") for obs in user_observations])
+        
+        return jsonify({
+            "username": username,
+            "total_observations": len(user_observations),
+            "unique_species": unique_species,
+            "unique_locations": unique_locations,
+            "recent_observations": recent_observations,
+            "rank": user_rank,
+            "total_users": len(all_users),
+            "rewards": rewards,
+            "monthly_trends": monthly_trends,
+            "top_species": [{"name": name, "count": count} 
+                           for name, count in species_counts.most_common(5)],
+            "top_locations": [{"name": loc, "count": count} 
+                             for loc, count in location_counts.most_common(5)]
+        })
+    
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve user stats: {str(e)}"}), 500
+
+
+def calculate_user_rewards(username, user_observations, all_users, user_rank):
+    """Helper function to calculate rewards and badges for a user"""
+    rewards = []
+    
+    # Number of observations rewards
+    obs_count = len(user_observations)
+    if obs_count >= 50:
+        rewards.append({
+            "id": "obs-master",
+            "name": "Observation Master",
+            "description": "Contributed 50+ observations",
+            "icon": "🔍",
+            "level": 3
+        })
+    elif obs_count >= 25:
+        rewards.append({
+            "id": "obs-expert",
+            "name": "Observation Expert",
+            "description": "Contributed 25+ observations",
+            "icon": "🔍",
+            "level": 2
+        })
+    elif obs_count >= 10:
+        rewards.append({
+            "id": "obs-enthusiast",
+            "name": "Observation Enthusiast",
+            "description": "Contributed 10+ observations",
+            "icon": "🔍",
+            "level": 1
+        })
+    
+    # Species diversity rewards
+    unique_species = len(set(obs.get("species_name", "") for obs in user_observations))
+    if unique_species >= 30:
+        rewards.append({
+            "id": "species-master",
+            "name": "Species Diversity Master",
+            "description": "Observed 30+ different species",
+            "icon": "🦉",
+            "level": 3
+        })
+    elif unique_species >= 15:
+        rewards.append({
+            "id": "species-explorer",
+            "name": "Species Explorer",
+            "description": "Observed 15+ different species",
+            "icon": "🦉",
+            "level": 2
+        })
+    elif unique_species >= 5:
+        rewards.append({
+            "id": "species-novice",
+            "name": "Species Novice",
+            "description": "Observed 5+ different species",
+            "icon": "🦉",
+            "level": 1
+        })
+    
+    # Location explorer rewards
+    unique_locations = len(set(obs.get("location", "") for obs in user_observations))
+    if unique_locations >= 10:
+        rewards.append({
+            "id": "location-master",
+            "name": "Location Master Explorer",
+            "description": "Visited 10+ different locations",
+            "icon": "🗺️",
+            "level": 3
+        })
+    elif unique_locations >= 5:
+        rewards.append({
+            "id": "location-explorer",
+            "name": "Location Explorer",
+            "description": "Visited 5+ different locations",
+            "icon": "🗺️",
+            "level": 2
+        })
+    elif unique_locations >= 3:
+        rewards.append({
+            "id": "location-visitor",
+            "name": "Location Visitor",
+            "description": "Visited 3+ different locations",
+            "icon": "🗺️",
+            "level": 1
+        })
+    
+    # Ranking rewards
+    if user_rank == 1:
+        rewards.append({
+            "id": "top-contributor",
+            "name": "Top Contributor",
+            "description": "Ranked #1 in the community",
+            "icon": "🏆",
+            "level": 3
+        })
+    elif user_rank <= 3:
+        rewards.append({
+            "id": "elite-contributor",
+            "name": "Elite Contributor",
+            "description": "Ranked in the top 3",
+            "icon": "🏆",
+            "level": 2
+        })
+    elif user_rank <= 10:
+        rewards.append({
+            "id": "top-ten",
+            "name": "Top 10 Contributor",
+            "description": "Ranked in the top 10",
+            "icon": "🏆",
+            "level": 1
+        })
+    
+    # Consistency reward
+    dates = [obs.get("date_observed", "") for obs in user_observations]
+    consecutive_days = calculate_consecutive_days(dates)
+    if consecutive_days >= 7:
+        rewards.append({
+            "id": "weekly-streak",
+            "name": "Weekly Streak",
+            "description": f"Observed on {consecutive_days} consecutive days",
+            "icon": "🔥",
+            "level": 2
+        })
+    elif consecutive_days >= 3:
+        rewards.append({
+            "id": "mini-streak",
+            "name": "Mini Streak",
+            "description": f"Observed on {consecutive_days} consecutive days",
+            "icon": "🔥",
+            "level": 1
+        })
+    
+    return rewards
+
+
+def calculate_consecutive_days(dates):
+    """Helper function to calculate the longest streak of consecutive days"""
+    if not dates:
+        return 0
+    
+    sorted_dates = sorted(filter(None, dates))
+    if not sorted_dates:
+        return 0
+    
+    # Convert strings to datetime objects
+    date_objects = [datetime.strptime(date, "%Y-%m-%d") for date in sorted_dates]
+    
+    max_streak = current_streak = 1
+    for i in range(1, len(date_objects)):
+        # Check if dates are consecutive
+        if (date_objects[i] - date_objects[i-1]).days == 1:
+            current_streak += 1
+            max_streak = max(max_streak, current_streak)
+        elif (date_objects[i] - date_objects[i-1]).days > 1:
+            current_streak = 1
+    
+    return max_streak
+
+
+def calculate_monthly_trends(username, all_observations):
+    """Calculate monthly observation counts for the past 6 months"""
+    user_observations = [obs for obs in all_observations 
+                         if obs.get("observer", "").lower() == username.lower()]
+    
+    # Get the last 6 months
+    now = datetime.now()
+    months = []
+    for i in range(5, -1, -1):
+        month_date = now - timedelta(days=30*i)
+        months.append(month_date.strftime("%Y-%m"))
+    
+    monthly_counts = {month: 0 for month in months}
+    
+    for obs in user_observations:
+        date_str = obs.get("date_observed", "")
+        if date_str:
+            try:
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                month_key = date_obj.strftime("%Y-%m")
+                if month_key in monthly_counts:
+                    monthly_counts[month_key] += 1
+            except ValueError:
+                pass
+    
+    return [{"month": k, "count": v} for k, v in monthly_counts.items()]
+
+
+@app.route("/api/community/leaderboard", methods=["GET"])
+def get_community_leaderboard():
+    """
+    Returns the community leaderboard with top contributors
+    and various achievement categories.
+    """
+    try:
+        # Observations by user
+        user_observations = Counter([obs.get("observer", "Anonymous") for obs in observations])
+        top_observers = [{"name": name, "observations": count} 
+                       for name, count in user_observations.most_common(10)]
+        
+        # Calculate species diversity by user
+        species_by_user = defaultdict(set)
+        for obs in observations:
+            observer = obs.get("observer", "Anonymous")
+            species = obs.get("species_name", "")
+            if species:
+                species_by_user[observer].add(species)
+        
+        species_diversity = [(user, len(species)) for user, species in species_by_user.items()]
+        top_diversity = [{"name": name, "unique_species": count} 
+                        for name, count in sorted(species_diversity, key=lambda x: x[1], reverse=True)[:10]]
+        
+        # Calculate locations by user
+        locations_by_user = defaultdict(set)
+        for obs in observations:
+            observer = obs.get("observer", "Anonymous")
+            location = obs.get("location", "")
+            if location:
+                locations_by_user[observer].add(location)
+        
+        location_explorers = [(user, len(locations)) for user, locations in locations_by_user.items()]
+        top_explorers = [{"name": name, "unique_locations": count} 
+                        for name, count in sorted(location_explorers, key=lambda x: x[1], reverse=True)[:10]]
+        
+        # Recent contributors (last 30 days)
+        thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        recent_observations = [obs for obs in observations 
+                              if obs.get("date_observed", "") >= thirty_days_ago]
+        recent_contributors = Counter([obs.get("observer", "Anonymous") for obs in recent_observations])
+        top_recent = [{"name": name, "recent_observations": count} 
+                     for name, count in recent_contributors.most_common(10)]
+        
+        return jsonify({
+            "top_observers": top_observers,
+            "species_diversity": top_diversity,
+            "location_explorers": top_explorers,
+            "recent_contributors": top_recent,
+            "total_community_observations": len(observations),
+            "total_users": len(user_observations)
+        })
+    
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve leaderboard: {str(e)}"}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)

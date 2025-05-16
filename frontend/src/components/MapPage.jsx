@@ -1,6 +1,20 @@
 import React from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+// Fix Leaflet's default icon paths for React apps (CRA etc)
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+delete L.Icon.Default.prototype._getIconUrl;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
 
 const locationCoords = {
   "Margalla Hills": [33.7294, 73.0551],
@@ -17,10 +31,7 @@ const locationCoords = {
 };
 
 export default function MapPage({ observations }) {
-  // Map click marker to add new observation location (optional extension)
-  // Just display existing markers here
-
-  // Filter observations with lat/lng based on location matching
+  // Map markers based on known locations
   const markers = observations
     .map((obs) => {
       for (const key in locationCoords) {
@@ -37,7 +48,7 @@ export default function MapPage({ observations }) {
       <h2>Observation Map</h2>
       <MapContainer center={[33.7, 73.05]} zoom={12} style={{ height: "100%", width: "100%" }}>
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {markers.map((obs) => (
@@ -47,7 +58,13 @@ export default function MapPage({ observations }) {
               {obs.date_observed} at {obs.location}<br />
               Observer: {obs.observer}<br />
               Notes: {obs.notes}<br />
-              {obs.image_url && <img src={obs.image_url} alt={obs.common_name} style={{ width: "100%", marginTop: "5px", borderRadius: "6px" }} />}
+              {obs.image_url && (
+                <img
+                  src={obs.image_url}
+                  alt={obs.common_name}
+                  style={{ width: "100%", marginTop: "5px", borderRadius: "6px" }}
+                />
+              )}
             </Popup>
           </Marker>
         ))}

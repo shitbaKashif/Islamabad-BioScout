@@ -4,6 +4,7 @@ import ObservationList from "./components/ObservationList";
 import MapPage from "./components/MapPage";
 import QASection from "./components/QASection";
 import TopObserver from "./components/TopObserver";
+import AnalyticsPanel from "./components/AnalyticsPanel";
 
 export default function App() {
   const [observations, setObservations] = useState([]);
@@ -29,29 +30,25 @@ export default function App() {
     formData.append("date_observed", obs.date_observed);
     formData.append("location", obs.location);
     formData.append("notes", obs.notes);
-    formData.append("observer", obs.observer);
+    formData.append("observer", obs.observer || "Anonymous");
     if (obs.image) {
       formData.append("image", obs.image);
     } else {
       formData.append("image_url", obs.image_url || "");
     }
 
-    try {
-      const res = await fetch("http://localhost:5000/api/submit", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert("Error: " + (err.error || "Unknown"));
-        return;
-      }
-      alert("Observation submitted!");
-      fetchObservations();
-    } catch {
-      alert("Submission failed.");
+    const res = await fetch("http://localhost:5000/api/submit", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || "Unknown submission error");
     }
+    await res.json(); // Consume response
   }
+
 
   return (
     <>
@@ -65,6 +62,7 @@ export default function App() {
         <MapPage observations={observations} />
         <ObservationList observations={observations} />
         <QASection />
+        <AnalyticsPanel />
         <TopObserver />
       </main>
     </>

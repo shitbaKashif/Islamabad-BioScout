@@ -4,9 +4,8 @@ from collections import Counter
 import os
 import uuid
 import re
-from inference_sdk import InferenceHTTPClient
+import requests  # For making HTTP requests to the API
 from werkzeug.utils import secure_filename
-import requests
 from utils import (
     load_observations,
     save_observation,
@@ -24,10 +23,8 @@ app.config['UPLOAD_FOLDER'] = "uploads"
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 PLANTNET_API_KEY = "2b106ucXBn1j4I6dUF4kBi9O"  # Use env vars for production!
-ROBOFLOW_CLIENT = InferenceHTTPClient(
-    api_url="https://serverless.roboflow.com",
-    api_key="IVX8leNC3DeP5QPQxHo2"
-)
+ROBOFLOW_API_KEY = "IVX8leNC3DeP5QPQxHo2"  # Your Roboflow API key
+ROBOFLOW_MODEL_ID = "wild-cpbq1/2"  # Your Roboflow model ID
 observations = load_observations().to_dict(orient='records')
 FAISS_INDEX, FAISS_CORPUS = build_faiss_index()
 
@@ -130,10 +127,18 @@ def classify_image_endpoint():
             )
 
         elif classification_type == "animal":
-            # Roboflow animal classification
-            with open(filepath, "rb") as img_file:
-                result = ROBOFLOW_CLIENT.infer(img_file, model_id="wild-cpbq1/2")
+            # Roboflow animal classification using direct API call
+            url = f"https://detect.roboflow.com/{ROBOFLOW_MODEL_ID}?api_key={ROBOFLOW_API_KEY}"
 
+            with open(filepath, "rb") as img_file:
+                response = requests.post(url, files={'file': img_file})
+
+            if not response.ok:
+                print(f"Roboflow API error: {response.status_code} - {response.text}")
+                os.remove(filepath)
+                return jsonify({"error": "Failed to classify animal."}), 500
+
+            result = response.json()
             predictions = result.get("predictions", [])
             if not predictions:
                 os.remove(filepath)
@@ -143,7 +148,6 @@ def classify_image_endpoint():
                     "explanation": "No matching animal species found."
                 })
 
-            # Take highest confidence prediction
             top_pred = max(predictions, key=lambda p: p.get("confidence", 0))
             species_name = top_pred.get("class", "Unknown")
             score = top_pred.get("confidence", 0)

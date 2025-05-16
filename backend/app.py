@@ -4,8 +4,18 @@ from collections import Counter
 import os
 import uuid
 import re
-from utils import (load_observations, save_observation, load_knowledge_base,
-                   query_similar_texts, generate_answer, save_uploaded_image, build_faiss_index)
+from inference_sdk import InferenceHTTPClient
+from werkzeug.utils import secure_filename
+import requests
+from utils import (
+    load_observations,
+    save_observation,
+    load_knowledge_base,
+    query_similar_texts,
+    generate_answer,
+    save_uploaded_image,
+    build_faiss_index,
+)
 
 app = Flask(__name__)
 CORS(app)
@@ -13,8 +23,14 @@ CORS(app)
 app.config['UPLOAD_FOLDER'] = "uploads"
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+PLANTNET_API_KEY = "2b106ucXBn1j4I6dUF4kBi9O"  # Use env vars for production!
+ROBOFLOW_CLIENT = InferenceHTTPClient(
+    api_url="https://serverless.roboflow.com",
+    api_key="IVX8leNC3DeP5QPQxHo2"
+)
 observations = load_observations().to_dict(orient='records')
 FAISS_INDEX, FAISS_CORPUS = build_faiss_index()
+
 
 @app.route("/api/observations", methods=["GET"])
 def get_observations():
@@ -24,7 +40,6 @@ def get_observations():
 @app.route("/api/submit", methods=["POST"])
 def submit_observation():
     try:
-        # Parse data from multipart/form-data or JSON
         if request.content_type.startswith('multipart/form-data'):
             data = request.form.to_dict()
             image_file = request.files.get('image')
@@ -38,7 +53,6 @@ def submit_observation():
             data = request.json or {}
             image_url = data.get("image_url", "")
 
-        # Validate required fields
         required = ["species_name", "common_name", "date_observed", "location"]
         missing = [field for field in required if not data.get(field)]
         if missing:
@@ -58,7 +72,6 @@ def submit_observation():
         observations.append(new_obs)
         save_observation(new_obs)
 
-        # Update FAISS index with new data
         global FAISS_INDEX, FAISS_CORPUS
         FAISS_INDEX, FAISS_CORPUS = build_faiss_index()
 
@@ -68,20 +81,103 @@ def submit_observation():
         return jsonify({"error": f"Submission failed: {str(e)}"}), 500
 
 
+@app.route("/uploads/<filename>")
+def serve_image(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+@app.route("/api/classify-image", methods=["POST"])
+def classify_image_endpoint():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image file provided"}), 400
+
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"error": "Empty filename"}), 400
+
+    classification_type = request.form.get("classification_type", "plant").lower()
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    try:
+        if classification_type == "plant":
+            # PlantNet API call
+            url = f"https://my-api.plantnet.org/v2/identify/all?api-key={PLANTNET_API_KEY}"
+            data = {'organs': 'leaf'}
+            with open(filepath, 'rb') as img_file:
+                files = {'images': img_file}
+                response = requests.post(url, files=files, data=data)
+                response.raise_for_status()
+                json_data = response.json()
+
+            if not json_data.get("results"):
+                os.remove(filepath)
+                return jsonify({
+                    "species_name": "Not Found",
+                    "confidence": 0,
+                    "explanation": "No matching plant species found."
+                })
+
+            top_result = json_data["results"][0]
+            species_name = top_result["species"]["scientificNameWithoutAuthor"]
+            common_names = top_result["species"].get("commonNames", [])
+            common_name = common_names[0] if common_names else ""
+            score = top_result.get("score", 0)
+            explanation = (
+                f"AI identified this as {common_name} ({species_name}) with confidence score {score:.2f}. "
+                "This identification is based on analysis of leaf characteristics from the uploaded image."
+            )
+
+        elif classification_type == "animal":
+            # Roboflow animal classification
+            with open(filepath, "rb") as img_file:
+                result = ROBOFLOW_CLIENT.infer(img_file, model_id="wild-cpbq1/2")
+
+            predictions = result.get("predictions", [])
+            if not predictions:
+                os.remove(filepath)
+                return jsonify({
+                    "species_name": "Not Found",
+                    "confidence": 0,
+                    "explanation": "No matching animal species found."
+                })
+
+            # Take highest confidence prediction
+            top_pred = max(predictions, key=lambda p: p.get("confidence", 0))
+            species_name = top_pred.get("class", "Unknown")
+            score = top_pred.get("confidence", 0)
+            explanation = (
+                f"AI identified this as {species_name} with confidence score {score:.2f}. "
+                "This identification is based on the Roboflow animal detection model."
+            )
+
+        else:
+            os.remove(filepath)
+            return jsonify({"error": "Invalid classification_type. Use 'plant' or 'animal'."}), 400
+
+    except Exception as e:
+        os.remove(filepath)
+        return jsonify({"error": f"Classification failed: {str(e)}"}), 500
+
+    os.remove(filepath)
+
+    return jsonify({
+        "species_name": f"{common_name} ({species_name})" if classification_type == "plant" else species_name,
+        "confidence": score,
+        "explanation": explanation,
+    })
+
+
 @app.route("/api/ai-species-id", methods=["POST"])
 def ai_species_id():
-    # Placeholder for real AI model integration
+    # Placeholder for real AI model integration or fallback
     return jsonify({
         "suggestions": [
             {"species_name": "Aquila rapax", "common_name": "Tawny Eagle", "confidence": 0.92},
             {"species_name": "Buceros bicornis", "common_name": "Great Hornbill", "confidence": 0.87},
         ]
     })
-
-
-@app.route("/uploads/<filename>")
-def serve_image(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route("/api/qa", methods=["POST"])
@@ -91,13 +187,9 @@ def qa():
         return jsonify({"error": "Empty question"}), 400
 
     try:
-        # Normalize question text
         query = user_question.lower()
-
-        # Retrieve top relevant snippets from RAG
         retrieved_snippets = query_similar_texts(query, top_k=5)
 
-        # Fallback: If no snippets retrieved, try simple keyword search in knowledge base + observations
         if not retrieved_snippets:
             kb = load_knowledge_base()
             obs_notes = [obs.get("notes", "") for obs in observations if obs.get("notes")]
@@ -110,11 +202,9 @@ def qa():
                     retrieved_snippets.append(text)
             retrieved_snippets = retrieved_snippets[:5]
 
-        # If still empty, respond politely
         if not retrieved_snippets:
             return jsonify({"answer": "Sorry, I couldn't find relevant information. Please try asking differently."})
 
-        # Generate an answer with the LLM augmented by retrieved context
         answer = generate_answer(retrieved_snippets, user_question)
         return jsonify({"answer": answer})
 
@@ -124,34 +214,24 @@ def qa():
 
 @app.route("/api/gamification", methods=["GET"])
 def gamification():
-    from collections import Counter
     cnt = Counter(obs.get("observer", "Anonymous") for obs in observations)
     if not cnt:
         return jsonify({"top_observer": "None", "submissions": 0})
     top, num = cnt.most_common(1)[0]
     return jsonify({"top_observer": top, "submissions": num})
 
+
 @app.route("/api/analytics", methods=["GET"])
 def analytics():
-    obs = observations  # In-memory observations list
-    
-    # Total observations
+    obs = observations
     total_obs = len(obs)
-    
-    # Top 5 observers by submissions
     observer_counts = Counter(o.get("observer", "Anonymous") for o in obs)
     top_observers = observer_counts.most_common(5)
-    
-    # Top 5 species observed (by common_name + species_name)
-    species_counts = Counter(
-        f"{o.get('common_name', 'Unknown')} ({o.get('species_name', 'Unknown')})" for o in obs
-    )
+    species_counts = Counter(f"{o.get('common_name', 'Unknown')} ({o.get('species_name', 'Unknown')})" for o in obs)
     top_species = species_counts.most_common(5)
-    
-    # Top 5 popular locations
     location_counts = Counter(o.get("location", "Unknown") for o in obs)
     top_locations = location_counts.most_common(5)
-    
+
     return jsonify({
         "total_observations": total_obs,
         "top_observers": [{"observer": o, "count": c} for o, c in top_observers],

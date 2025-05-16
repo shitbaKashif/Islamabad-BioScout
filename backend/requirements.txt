@@ -1,11 +1,13 @@
-Flask==2.3.2
+flask==2.2.3
 flask-cors==3.0.10
-pandas==2.0.1
-python-dotenv==1.0.0
-sentence-transformers==2.2.2
-scikit-learn==1.3.0
-Pillow==10.0.0
-transformers==4.34.0
-torch==2.0.1
-faiss-cpu==1.7.4.post2
-numpy==1.24.4
+werkzeug==2.2.3
+requests==2.31.0
+pandas==2.0.2
+numpy==1.24.3
+faiss-cpu==1.7.4  # For similarity search (CPU version; change to faiss-gpu if GPU available)
+sentence-transformers==2.2.2  # For embeddings in RAG (optional)
+transformers==4.31.0  # For LLM and text generation (optional)
+torch==2.0.1  # Required by transformers (optional)
+scikit-learn==1.2.2  # For cosine similarity and other utilities
+python-dotenv==1.0.0  # For environment variable management
+inference-sdk==0.1.3  # Roboflow SDK if available, else use requests fallback

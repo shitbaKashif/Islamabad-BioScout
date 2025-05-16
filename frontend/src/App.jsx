@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import ObservationForm from "./components/ObservationForm";
 import ObservationList from "./components/ObservationList";
 import MapPage from "./components/MapPage";
@@ -6,6 +7,7 @@ import QASection from "./components/QASection";
 import TopObserver from "./components/TopObserver";
 import AnalyticsPanel from "./components/AnalyticsPanel";
 import AboutUs from "./components/AboutUs";
+import ImageClassifier from "./components/ImageClassifier";
 
 export default function App() {
   const [observations, setObservations] = useState([]);
@@ -47,26 +49,73 @@ export default function App() {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || "Unknown submission error");
     }
-    await res.json(); // Consume response
+    await res.json();
+    // Refresh observations after submission
+    fetchObservations();
   }
 
-
   return (
-    <>
-      <header>
-        <h1>BioScout Islamabad</h1>
-        <h3>AI for Community Biodiversity & Sustainable Insights</h3>
-        <p><em>Event Date: May 16th, 2025</em></p>
+    <Router>
+      <header
+        style={{
+          backgroundColor: "#004d40",
+          color: "white",
+          padding: "15px 30px",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          fontWeight: "bold",
+          display: "flex",
+          gap: "20px",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div>
+          <h1 style={{ margin: 0 }}>BioScout Islamabad</h1>
+          <h4 style={{ margin: 0, fontWeight: "normal" }}>
+            AI for Community Biodiversity & Sustainable Insights
+          </h4>
+          <p style={{ margin: 0, fontStyle: "italic" }}>Event Date: May 16th, 2025</p>
+        </div>
+
+        {/* Navigation Links */}
+        <nav>
+          <Link to="/" style={{ color: "white", textDecoration: "none", marginRight: "15px" }}>
+            Home
+          </Link>
+          <Link to="/classify" style={{ color: "white", textDecoration: "none", marginRight: "15px" }}>
+            AI Image Classifier
+          </Link>
+          <Link to="/about" style={{ color: "white", textDecoration: "none" }}>
+            About Us
+          </Link>
+        </nav>
       </header>
+
       <main style={{ maxWidth: "900px", margin: "auto", padding: "10px" }}>
-        <AboutUs />
-        <ObservationForm onSubmit={handleSubmit} />
-        <MapPage observations={observations} />
-        <ObservationList observations={observations} />
-        <QASection />
-        <AnalyticsPanel />
-        <TopObserver />
+        <Routes>
+          {/* Home Page: All main components */}
+          <Route
+            path="/"
+            element={
+              <>
+                <AboutUs />
+                <ObservationForm onSubmit={handleSubmit} />
+                <MapPage observations={observations} />
+                <ObservationList observations={observations} />
+                <QASection />
+                <AnalyticsPanel />
+                <TopObserver />
+              </>
+            }
+          />
+
+          {/* AI Image Classifier Page */}
+          <Route path="/classify" element={<ImageClassifier />} />
+
+          {/* About Page */}
+          <Route path="/about" element={<AboutUs />} />
+        </Routes>
       </main>
-    </>
+    </Router>
   );
 }

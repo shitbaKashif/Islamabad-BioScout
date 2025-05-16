@@ -5,6 +5,7 @@ import MapPage from "./components/MapPage";
 import QASection from "./components/QASection";
 import TopObserver from "./components/TopObserver";
 import AnalyticsPanel from "./components/AnalyticsPanel";
+import AboutUs from "./components/AboutUs";
 
 export default function App() {
   const [observations, setObservations] = useState([]);
@@ -58,6 +59,7 @@ export default function App() {
         <p><em>Event Date: May 16th, 2025</em></p>
       </header>
       <main style={{ maxWidth: "900px", margin: "auto", padding: "10px" }}>
+        <AboutUs />
         <ObservationForm onSubmit={handleSubmit} />
         <MapPage observations={observations} />
         <ObservationList observations={observations} />

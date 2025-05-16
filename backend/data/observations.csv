@@ -1,9 +1,14 @@
 observation_id,species_name,common_name,date_observed,location,image_url,notes,observer
-OBS0001,Aquila rapax,Tawny Eagle,2025-05-05,"Trail 2, Margalla Hills",https://upload.wikimedia.org/wikipedia/commons/7/7a/Aquila_rapax_440543675.jpg,Seen basking in sun near rocks.,Manahil
-OBS0002,Ceryle rudis,Pied Kingfisher,2025-05-02,Rawal Lake,https://upload.wikimedia.org/wikipedia/commons/1/15/Ceryle_rudis_238646426.jpg,Flock moving in coordinated pattern.,Shitba
-OBS0003,Columba livia,Rock Pigeon,2025-05-11,"Trail 3, Margalla Hills",https://upload.wikimedia.org/wikipedia/commons/8/86/Columba_livia_domestica_66335414.png,Heard distinctive call before visual.,Ali
-OBS0004,Manis crassicaudata,Indian Pangolin,2025-05-12,"Trail 1, Margalla Hills",https://upload.wikimedia.org/wikipedia/commons/4/4a/Indian_Pangolin_Manis_crassicaudata_by_Sujoy.jpg,Frequent visitor to the area.,Sara
-OBS0005,Haliaeetus leucoryphus,Pallas's Fish Eagle,2025-05-04,Shah Allah Ditta Caves,https://upload.wikimedia.org/wikipedia/commons/5/53/Pallas%27s_Fish_Eagle_%28_Haliaeetus_leucoryphus%29_2.jpg,Spotted during early morning hike.,Ahmed
+OBS0101,Pinus roxburghii,Chir Pine,2025-05-10,Margalla Hills,https://www.istockphoto.com/photo/chir-pine-gm157836207-13244165,Coniferous tree with long needle-like leaves.,Manahil
+OBS0102,Olea ferruginea,Olive Tree,2025-05-08,Shakarparian,https://forestrypedia.com/wp-content/uploads/2016/12/Olea-ferruginea.jpg,Hardwood tree with greyish-green leaves.,Shitba
+OBS0103,Senegalia modesta,Phulai,2025-05-09,Faisal Mosque,https://efloraofindia.com/wp-content/uploads/2012/07/Senegalia-modesta.jpg,Thorny shrub providing shelter to local wildlife.,Ali
+OBS0104,Dodonaea viscosa,Snatha,2025-05-12,Rawal Lake,https://www.dreamstime.com/dodonaea-viscosa-image276717602,Evergreen shrub used for erosion control.,Sara
+OBS0105,Butea frondosa,Dhak,2025-05-14,Pir Sohawa,https://www.istockphoto.com/photo/butea-frondosa-gm157836207-13244165,Deciduous tree with bright orange flowers.,Manahil
+OBS0106,Punica granatum,Pomegranate Tree,2025-05-07,Saidpur Village,https://www.vdberk.com/media/trees/punica-granatum.jpg,Fruit-bearing tree with edible seeds.,Shitba
+OBS0107,Bauhinia variegata,Kachnar,2025-05-11,Daman-e-Koh,https://www.istockphoto.com/photo/bauhinia-variegata-gm157836207-13244165,Flowering tree with orchid-like blossoms.,Ali
+OBS0108,Acacia nilotica,Acacia Tree,2025-05-13,Zoo vicinity,https://www.istockphoto.com/photo/acacia-nilotica-gm157836207-13244165,Tree with yellow ball-shaped flowers.,Shitba
+OBS0109,Eucalyptus globulus,Eucalyptus,2025-05-06,Trail 3, Margalla Hills,https://www.istockphoto.com/photo/eucalyptus-globulus-gm157836207-13244165,Fast-growing tree with aromatic leaves.,Manahil
+OBS0110,Rosa indica,Wild Rose,2025-05-10,Islamabad University Forest Area,https://www.gardentags.com/plant-encyclopedia/rosa-indica/39123,Flowering plant with fragrant blooms.,Shitba
 OBS0006,Francolinus pondicerianus,Grey Francolin,2025-05-13,Rawal Lake,https://upload.wikimedia.org/wikipedia/commons/9/99/Grey_Francolin_or_Grey_Partridge_-_Francolinus_pondicerianus.jpg,Noticed in canopy while birdwatching.,Zainab
 OBS0007,Ovis vignei,Urial,2025-05-01,Islamabad University Forest Area,https://upload.wikimedia.org/wikipedia/commons/d/da/Ovis_vignei_bochariensis.jpg,Spotted during early morning hike.,Omar
 OBS0008,Buceros bicornis,Great Hornbill,2025-05-08,"Trail 3, Margalla Hills",https://upload.wikimedia.org/wikipedia/commons/e/ee/Great_hornbill_Photograph_by_Shantanu_Kuveskar.jpg,Heard distinctive call before visual.,Fatima
@@ -2000,3 +2005,5 @@ OBS1998,Naja naja,Indian Cobra,2025-05-05,"Trail 4, Margalla Hills",/images/indi
 OBS1999,Macaca mulatta,Rhesus Macaque,2025-05-15,Rawal Dam,/images/rhesus_macaque.jpg,Seen basking in sun near rocks.,Zeeshan
 OBS2000,Panthera pardus,Common Leopard,2025-05-07,Rawal Dam,/images/common_leopard.jpg,Heard distinctive call before visual.,Rabia
 5BFDC66C,Justicia adhatoda,Malabar nut,2025-05-04,Rawal DAM,https://static.inaturalist.org/photos/30154189/medium.jpeg,Very small,SK
+54A6A67C,Hypolimnas bolina,common eggfly,2025-05-15,"Islamabad, H12",https://static.inaturalist.org/photos/153623985/medium.jpg,Very beautiful insect,Manahil
+8C06F823,Cascabela thevetia,lucky nut,2025-05-10,Margalla Hills,https://inaturalist-open-data.s3.amazonaws.com/photos/51171811/medium.jpg,Beautiful plant,Manahil
